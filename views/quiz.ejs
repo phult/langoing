@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Langoing Quiz</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <h1>Vocabulary Challenge</h1>
+        <% 
+        if (typeof result != 'undefined') {
+        %>
+        <h2>=> Result:</h2>
+        <h3> - Questions: <%= result.answer_count %></h3>
+        <h3> - Submited answers: <%= result.submit_answer_count %></h3>
+        <h3> - Correct answers: <%= result.correct_answer_count %></h3>
+        <% 
+        }
+        %>
+        <form method="POST" action="/quiz">
+        <% 
+            for (var i = 0; i < quizes.length; i++) { 
+            var color = "";
+            if (typeof result != 'undefined') {
+                color = quizes[i].is_correct == true ? "green": "red";
+            }
+        %>
+            <h2 style="color: <%= color %>"><%= (i + 1) + ". "+ quizes[i].question %></h2>
+            <div style="margin: 5px;">
+                <label class="radiocontainer" id="label-<%= quizes[i].id %>" style="display: block;">
+                    <input type="radio" name="quiz-id-<%= quizes[i].id %>" id="<%= quizes[i].id %>-1" onclick="clickRadio(this)" value="1" 
+                    <%= quizes[i].submit_answer == 1 ? "checked": "" %>>
+                    <%= quizes[i].answer1 %>
+                    <span class="checkmark"></span>
+                </label>
+            </div>
+            <div style="margin: 5px;">
+                <label class="radiocontainer" id="label-<%= quizes[i].id %>" style="display: block;"> 
+                    <input type="radio" name="quiz-id-<%= quizes[i].id %>" id="<%= quizes[i].id %>-2" onclick="clickRadio(this)" value="2"
+                    <%= quizes[i].submit_answer == 2 ? "checked": "" %>>
+                    <%= quizes[i].answer2 %>
+                    <span class="checkmark"></span>
+                </label>
+            </div>
+            <div style="margin: 5px;">
+                <label class="radiocontainer" id="label-<%= quizes[i].id %>" style="display: block;"> 
+                    <input type="radio" name="quiz-id-<%= quizes[i].id %>" id="<%= quizes[i].id %>-3" onclick="clickRadio(this)" value="3"
+                    <%= quizes[i].submit_answer == 3 ? "checked": "" %>>
+                    <%= quizes[i].answer3 %>
+                    <span class="checkmark"></span>
+                </label>
+            </div>
+            <div style="margin: 5px;">
+                <label class="radiocontainer" id="label-<%= quizes[i].id %>" style="display: block;"> 
+                    <input type="radio" name="quiz-id-<%= quizes[i].id %>" id="<%= quizes[i].id %>-4" onclick="clickRadio(this)" value="4"
+                    <%= quizes[i].submit_answer == 4 ? "checked": "" %>>
+                    <%= quizes[i].answer4 %>
+                    <span class="checkmark"></span>
+                </label>
+            </div>
+         <% } %>
+         <button type="submit" style="margin-top: 20px;padding:10px;background-color: red;font-weight: bold;">SUBMIT >></button>
+        </form>
+    </body>
+</html>
