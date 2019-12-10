@@ -3,6 +3,7 @@ const Cache = require("cache");
 let quizCache = new Cache(1 * 24 * 60 * 60 * 1000);
 
 function HomeController($config, $event, $logger, $dbConnection) {
+    const QUIZ_SIZE = 140;
     this.welcome = function (io) {
         io.json({
             name: $config.get("package.name"),
@@ -22,15 +23,24 @@ function HomeController($config, $event, $logger, $dbConnection) {
                     SELECT id AS sid
                     FROM quiz
                     ORDER BY RAND()
-                    LIMIT 140
-                ) tmp
+                    LIMIT `
+                + QUIZ_SIZE +
+                `) tmp
             WHERE quiz.id = tmp.sid;`);
-            console.log('quizes[0]', quizes[0]);
             for (let index = 0; index < quizes.length; index++) {
                 quizes[index] = suffleQuizAnswer(quizes[index]);
             }
-            console.log('quizes[0]', quizes[0]);
             quizCache.put("quizes", quizes);
+        }
+        // cache quiz session start time
+        let sessionCacheKey = "quiz_session_" + io.session.id;
+        if (quizCache.get(sessionCacheKey) == null) {
+            let quizSession = {
+                "id": io.session.id,
+                "startTime": io.session.lastActive
+            };
+            quizCache.put(sessionCacheKey, quizSession);
+            $logger.info("START", quizSession);
         }
         io.render("quiz", {
             "quizes": quizes
@@ -40,37 +50,49 @@ function HomeController($config, $event, $logger, $dbConnection) {
         let result = {
             answer_count: 0,
             submit_answer_count: 0,
-            correct_answer_count: 0
+            correct_answer_count: 0,
+            timer: 0
         }
-        let quizes = JSON.parse(JSON.stringify(quizCache.get("quizes")));
-        result.answer_count = quizes.length;
-        for (const key in io.inputs) {
-            var keySpliter = key.split("quiz-id-");
-            if (keySpliter.length == 2) {
-                result.submit_answer_count++;
-                let quizId = keySpliter[1];
-                let submitAnswer = io.inputs[key];
-                quizes.forEach(item => {
-                    if (item.id == quizId) {
-                        item.submit_answer = submitAnswer;
-                        item.submit_answer_text = item["answer" + submitAnswer];
-                        item.correct_answer_text = item["answer" + item.correct_answer];
-                        item.is_correct = false;
-                        if (submitAnswer == item.correct_answer) {
-                            item.is_correct = true;
-                            result.correct_answer_count++;
+        // process quiz session
+        let sessionCacheKey = "quiz_session_" + io.session.id;
+        let quizSession = quizCache.get(sessionCacheKey);
+        if (quizSession != null && quizSession.finishTime == null) {
+            result.timer = io.session.lastActive - quizSession.startTime;
+            quizSession.finishTime = io.session.lastActive;
+            quizCache.put(sessionCacheKey, quizSession);
+            $logger.info("FINISH: ", quizSession);
+            // mark quizes
+            let quizes = JSON.parse(JSON.stringify(quizCache.get("quizes")));
+            result.answer_count = quizes.length;
+            for (const key in io.inputs) {
+                var keySpliter = key.split("quiz-id-");
+                if (keySpliter.length == 2) {
+                    result.submit_answer_count++;
+                    let quizId = keySpliter[1];
+                    let submitAnswer = io.inputs[key];
+                    quizes.forEach(item => {
+                        if (item.id == quizId) {
+                            item.submit_answer = submitAnswer;
+                            item.submit_answer_text = item["answer" + submitAnswer];
+                            item.correct_answer_text = item["answer" + item.correct_answer];
+                            item.is_correct = false;
+                            if (submitAnswer == item.correct_answer) {
+                                item.is_correct = true;
+                                result.correct_answer_count++;
+                            }
+                            return;
                         }
-                        return;
-                    }
-                });
+                    });
+                }
             }
+            io.render("quiz", {
+                "quizes": quizes,
+                "result": result
+            });
+        } else {
+            quizCache.put(sessionCacheKey, null);
+            io.delegate("HomeController@quiz");
         }
-        console.log("result", result);
-        console.log("quizes", quizes);
-        io.render("quiz", {
-            "quizes": quizes,
-            "result": result
-        });
     }
     function suffleQuizAnswer(quiz) {
         var answers = [];
