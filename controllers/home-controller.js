@@ -3,7 +3,6 @@ const Cache = require("cache");
 let quizCache = new Cache(1 * 24 * 60 * 60 * 1000);
 
 function HomeController($config, $event, $logger, $dbConnection) {
-    const QUIZ_SIZE = 140;
     this.welcome = function (io) {
         io.json({
             name: $config.get("package.name"),
@@ -24,7 +23,7 @@ function HomeController($config, $event, $logger, $dbConnection) {
                     FROM quiz
                     ORDER BY RAND()
                     LIMIT `
-                + QUIZ_SIZE +
+                + $config.get("quiz.quizSize", 140) +
                 `) tmp
             WHERE quiz.id = tmp.sid;`);
             for (let index = 0; index < quizes.length; index++) {
@@ -56,7 +55,10 @@ function HomeController($config, $event, $logger, $dbConnection) {
         // process quiz session
         let sessionCacheKey = "quiz_session_" + io.session.id;
         let quizSession = quizCache.get(sessionCacheKey);
-        if (quizSession != null && quizSession.finishTime == null) {
+        let enableEditAfterSubmitting = $config.get("quiz.editAfterSubmitting", true);
+        if (quizSession != null
+            && (enableEditAfterSubmitting || quizSession.finishTime == null)
+        ) {
             result.timer = io.session.lastActive - quizSession.startTime;
             quizSession.finishTime = io.session.lastActive;
             quizCache.put(sessionCacheKey, quizSession);
